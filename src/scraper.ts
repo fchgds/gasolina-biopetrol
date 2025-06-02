@@ -10,19 +10,29 @@ export async function scrapeRequest(request: Request,env: { DB: D1Database }): P
 		const response = await axios.get(url);
 		const html = response.data;
 		const $ = cheerio.load(html);
-
+		let ultimaMedicionFecha = "";
 		const results: { estacion: string, litros: string, timestamp: string, address: string }[] = [];
+		const ultimaMedicion = $('h5:contains("Última medición")');
+		console.log(ultimaMedicion.text());
 
+		if (ultimaMedicion.length > 0) {
+		// Example: "Última medición 2025-06-02 17:31"
+
+		const text = ultimaMedicion.text();
+		const match = text.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+			if (match) {
+				 ultimaMedicionFecha = match[1] + " " + match[2];
+			}
+		}
 
 		$('.rounded-top').each((index, element) => {
 			const estacion = $(element).text().trim();
 
 			// Extract the text content of the next 5 .text-dark divs
-			const textDarkDivs = $(element).nextAll('.text-dark').slice(0, 5);
+			const textDarkDivs = $(element).nextAll('.text-dark').slice(0, 9);
 			const litros = textDarkDivs.eq(1).text().trim();
-			const timestamp = textDarkDivs.eq(3).text().trim();
-			const address = textDarkDivs.eq(4).text().trim();
-
+			const timestamp = ultimaMedicionFecha;
+			const address = textDarkDivs.eq(6).text().trim();
 			results.push({ estacion, litros, timestamp, address });
 		});
 

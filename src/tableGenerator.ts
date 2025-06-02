@@ -6,7 +6,7 @@ export async function tableGenerator(request: Request, env: { DB: D1Database }):
     const results: { estacion: string, litros: string, timestamp: string, address: string }[] = 
       await scrapeRequest(request, env).then(res => res.json());
 
-    let table = '<table><tr><th>Estacion</th><th>Litros</th><th>Timestamp</th><th>Address</th></tr>';
+    let table = '<table><tr><th>Estación</th><th>Litros</th><th>Medición</th><th>Dirección</th></tr>';
     results.forEach(result => {
       table += `<tr><td>${result.estacion}</td><td>${result.litros}</td><td>${result.timestamp}</td><td>${result.address}</td></tr>`;
     });
