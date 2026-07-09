@@ -3,7 +3,7 @@ import * as cheerio from 'cheerio';
 import { saveResultsToDatabase } from './saveInDatabase';
 import { D1Database } from '@cloudflare/workers-types';
 
-const url = 'http://ec2-3-22-240-207.us-east-2.compute.amazonaws.com/guiasaldos/main/donde/134';
+const url = 'https://app9.biocloud.info/saldos/main/donde/134';
 
 export async function scrapeRequest(request: Request,env: { DB: D1Database }): Promise<Response> {
 	try {
