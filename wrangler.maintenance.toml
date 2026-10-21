@@ -1,0 +1,11 @@
+# Temporary incident configuration. It deliberately has no D1 binding or cron.
+name = "gasolina-biopetrol"
+main = "src/maintenance.ts"
+compatibility_date = "2024-11-12"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = []
+
+[observability]
+enabled = true

@@ -1,46 +1,26 @@
-import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { saveResultsToDatabase } from './saveInDatabase';
 import { D1Database } from '@cloudflare/workers-types';
+import { saveResultsToDatabase } from './saveInDatabase';
+import { FuelReading } from './types';
 
 const url = 'https://app9.biocloud.info/saldos/main/donde/134';
 
-export async function scrapeRequest(request: Request,env: { DB: D1Database }): Promise<Response> {
-	try {
-		const response = await axios.get(url);
-		const html = response.data;
-		const $ = cheerio.load(html);
-		let ultimaMedicionFecha = "";
-		const results: { estacion: string, litros: string, timestamp: string, address: string }[] = [];
-		const ultimaMedicion = $('h5:contains("Última medición")');
-		console.log(ultimaMedicion.text());
+/** Fetches the upstream source. This is called only by the scheduled job. */
+export async function refreshFuelReadings(env: { DB: D1Database }): Promise<number> {
+	const response = await fetch(url);
+	if (!response.ok) throw new Error(`Upstream request failed with ${response.status}`);
+	const $ = cheerio.load(await response.text());
+	const match = $('h5:contains("Última medición")').text().match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+	const timestamp = match ? `${match[1]} ${match[2]}` : '';
+	const results: FuelReading[] = [];
 
-		if (ultimaMedicion.length > 0) {
-		// Example: "Última medición 2025-06-02 17:31"
+	$('.rounded-top').each((_index, element) => {
+		const estacion = $(element).text().trim();
+		const fields = $(element).nextAll('.text-dark').slice(0, 9);
+		if (!estacion || !timestamp) return;
+		results.push({ estacion, litros: fields.eq(1).text().trim(), timestamp, address: fields.eq(6).text().trim() });
+	});
 
-		const text = ultimaMedicion.text();
-		const match = text.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
-			if (match) {
-				 ultimaMedicionFecha = match[1] + " " + match[2];
-			}
-		}
-
-		$('.rounded-top').each((index, element) => {
-			const estacion = $(element).text().trim();
-
-			// Extract the text content of the next 5 .text-dark divs
-			const textDarkDivs = $(element).nextAll('.text-dark').slice(0, 9);
-			const litros = textDarkDivs.eq(1).text().trim();
-			const timestamp = ultimaMedicionFecha;
-			const address = textDarkDivs.eq(6).text().trim();
-			results.push({ estacion, litros, timestamp, address });
-		});
-
-		await saveResultsToDatabase(results,env);
-
-		return new Response(JSON.stringify(results), { status: 200 });
-	} catch (error) {
-		console.error('Error fetching the URL:', error);
-		return new Response('Error executing scraper', { status: 500 });
-	}
+	await saveResultsToDatabase(results, env);
+	return results.length;
 }

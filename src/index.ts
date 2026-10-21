@@ -1,15 +1,23 @@
-import {tableGenerator} from "./tableGenerator";
+import { tableGenerator } from './tableGenerator';
+import { refreshFuelReadings } from './scraper';
+
+type WorkerEnv = { DB: D1Database };
 
 export default {
-  async fetch(request: Request, env: any, ctx: any): Promise<Response> {
-    let result = html + await tableGenerator(request,env) + footer;
+  async fetch(request: Request, env: WorkerEnv): Promise<Response> {
+    const url = new URL(request.url);
+    if (request.method !== 'GET' || url.pathname !== '/') return new Response('Not found', { status: 404 });
+    const result = html + await tableGenerator(env) + footer;
     return new Response(result, {
       status: 200,
       headers: {
         'Content-Type': 'text/html;charset=UTF-8',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'public, max-age=60, s-maxage=300',
       },
     });
+  },
+  async scheduled(_event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(refreshFuelReadings(env));
   },
 };
 
